@@ -7,6 +7,8 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Layout from "./components/Layout";
 import TasksPage from "./pages/TasksPage";
 import TaskDetails from "./pages/TaskDetails";
+import CreateTaskForm from "./components/CreateTaskForm";
+import ProfilePage from "./pages/ProfilePage";
 
 const router = createBrowserRouter([
   {
@@ -16,6 +18,8 @@ const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "/tasks", element: <TasksPage /> },
       { path: "/tasks/:taskId", element: <TaskDetails /> },
+      { path: "/post-task", element: <CreateTaskForm /> },
+      { path: "/profile", element: <ProfilePage /> },
     ],
   },
   { path: "/login", element: <Login /> },

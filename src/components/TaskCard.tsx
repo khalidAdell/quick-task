@@ -31,9 +31,12 @@ const TaskCard = ({ task }: { task: any }) => {
             <FaRegClock />
             <span>{formatDistanceToNow(new Date(task.postedAt))} ago</span>
           </div>
-          <button className="w-full md:w-auto bg-[#F4B860] hover:bg-[#e3a24f] text-white px-6 py-2 rounded-lg transition">
+          <Link
+            to={`/tasks/${task.id}`}
+            className="w-full md:w-auto bg-[#F4B860] hover:bg-[#e3a24f] text-white px-6 py-2 rounded-lg transition"
+          >
             Place Bid
-          </button>
+          </Link>
         </div>
       </div>
     </div>

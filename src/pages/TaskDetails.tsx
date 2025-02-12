@@ -1,4 +1,4 @@
-// TaskDetails.tsx
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -7,104 +7,89 @@ import {
   FaDollarSign,
 } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
-
-const dummyTasks = [
-  {
-    id: 1,
-    title: "Fix React Responsive Layout Issues",
-    category: "Web Development",
-    price: 250,
-    description:
-      "Need help fixing mobile responsiveness on a Next.js application. The current layout breaks on mobile devices and needs proper media queries implementation.",
-    postedAt: "2023-07-25",
-    deadline: "2023-08-01",
-    bids: [
-      { id: 1, bidder: "John D.", amount: 220, timestamp: "2023-07-26" },
-      { id: 2, bidder: "Sarah M.", amount: 240, timestamp: "2023-07-27" },
-    ],
-    rating: 4.8,
-    requirements: [
-      "Proven React experience",
-      "Responsive design portfolio",
-      "Available for quick turnaround",
-    ],
-  },
-  {
-    id: 2,
-    title: "Logo Design for Tech Startup",
-    category: "Graphic Design",
-    price: 150,
-    description:
-      "Modern and minimalist logo design required for new SaaS company.",
-    postedAt: "2023-07-24",
-    deadline: "2023-07-30",
-    bids: [
-      { id: 3, bidder: "Emily R.", amount: 140, timestamp: "2023-07-25" },
-      { id: 4, bidder: "Michael B.", amount: 150, timestamp: "2023-07-26" },
-    ],
-    rating: 4.9,
-    requirements: [
-      "Experience in SaaS branding",
-      "Portfolio of modern logo designs",
-    ],
-  },
-  {
-    id: 3,
-    title: "WordPress Site Optimization",
-    category: "Web Development",
-    price: 180,
-    description: "Speed optimization for existing WordPress site.",
-    postedAt: "2023-07-23",
-    deadline: "2023-07-29",
-    bids: [
-      { id: 5, bidder: "Liam W.", amount: 175, timestamp: "2023-07-24" },
-      { id: 6, bidder: "Sophia K.", amount: 180, timestamp: "2023-07-25" },
-    ],
-    rating: 4.5,
-    requirements: [
-      "Expertise in WP performance tuning",
-      "Experience with caching and CDNs",
-    ],
-  },
-  {
-    id: 4,
-    title: "Write SEO-Friendly Blog Post",
-    category: "Content Writing",
-    price: 100,
-    description: "Need a 1500-word blog post on AI trends with SEO keywords.",
-    postedAt: "2023-07-22",
-    deadline: "2023-07-28",
-    bids: [
-      { id: 7, bidder: "David P.", amount: 95, timestamp: "2023-07-23" },
-      { id: 8, bidder: "Emma J.", amount: 100, timestamp: "2023-07-24" },
-    ],
-    rating: 4.7,
-    requirements: [
-      "Strong SEO writing skills",
-      "Knowledge of AI industry trends",
-    ],
-  },
-  {
-    id: 5,
-    title: "Customer Support Chatbot",
-    category: "Tech Support",
-    price: 300,
-    description: "Develop a chatbot for customer support using OpenAI API.",
-    postedAt: "2023-07-21",
-    deadline: "2023-07-27",
-    bids: [
-      { id: 9, bidder: "Noah C.", amount: 290, timestamp: "2023-07-22" },
-      { id: 10, bidder: "Olivia H.", amount: 300, timestamp: "2023-07-23" },
-    ],
-    rating: 4.6,
-    requirements: ["Experience with AI chatbots", "Knowledge of OpenAI API"],
-  },
-];
+import { db, auth } from "../lib/firebase";
+import { doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { Bid, Task } from "../types/types";
 
 const TaskDetails = () => {
   const { taskId } = useParams();
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [bidAmount, setBidAmount] = useState("");
+  const [showBidForm, setShowBidForm] = useState(false);
 
-  const task = dummyTasks.find((t) => t.id === Number(taskId));
+  useEffect(() => {
+    if (!taskId) return;
+
+    const taskRef = doc(db, "tasks", taskId);
+    const unsubscribe = onSnapshot(
+      taskRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const taskData = snapshot.data() as Task;
+          setTask({ ...taskData, id: snapshot.id });
+          setLoading(false);
+        } else {
+          setError("Task not found");
+          setLoading(false);
+        }
+      },
+      (error) => {
+        setError(error.message || "Error fetching task");
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [taskId]);
+
+  const handleBidSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskId || !task || !auth.currentUser) return;
+
+    try {
+      const bid: Bid = {
+        id: Date.now().toString(),
+        bidderId: auth.currentUser.uid,
+        bidderName: auth.currentUser.displayName || "Anonymous",
+        amount: Number(bidAmount),
+        timestamp: new Date().toISOString(),
+      };
+
+      const taskRef = doc(db, "tasks", taskId);
+      await updateDoc(taskRef, {
+        bids: arrayUnion(bid),
+        bidsCount: task.bidsCount + 1,
+      });
+
+      setShowBidForm(false);
+      setBidAmount("");
+    } catch (err) {
+      setError("Failed to submit bid");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F4B860]"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">{error}</h1>
+          <Link to="/tasks" className="text-[#F4B860] hover:text-[#e3a24f]">
+            Browse available tasks
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!task) {
     return (
@@ -143,7 +128,7 @@ const TaskDetails = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <FaRegStar className="text-[#F4B860]" />
-                  {task.rating} ({task.bids.length} bids)
+                  {task.rating} ({task.bidsCount} bids)
                 </span>
               </div>
             </div>
@@ -199,9 +184,14 @@ const TaskDetails = () => {
                   </div>
                 </div>
 
-                <button className="w-full bg-[#F4B860] hover:bg-[#e3a24f] text-white py-3 rounded-lg mt-6 transition">
-                  Place Bid
-                </button>
+                {auth.currentUser && (
+                  <button
+                    onClick={() => setShowBidForm(true)}
+                    className="w-full bg-[#F4B860] hover:bg-[#e3a24f] text-white py-3 rounded-lg mt-6 transition"
+                  >
+                    Place Bid
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -218,7 +208,7 @@ const TaskDetails = () => {
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <h4 className="font-medium">{bid.bidder}</h4>
+                        <h4 className="font-medium">{bid.bidderName}</h4>
                         <p className="text-sm text-gray-500">
                           {formatDistanceToNow(new Date(bid.timestamp))} ago
                         </p>
@@ -239,6 +229,45 @@ const TaskDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Bid Form Modal */}
+      {showBidForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold mb-4">Place a Bid</h3>
+            <form onSubmit={handleBidSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Bid Amount ($)
+                </label>
+                <input
+                  type="number"
+                  className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
+                  value={bidAmount}
+                  onChange={(e) => setBidAmount(e.target.value)}
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowBidForm(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-[#F4B860] hover:bg-[#e3a24f] text-white rounded-lg"
+                >
+                  Submit Bid
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

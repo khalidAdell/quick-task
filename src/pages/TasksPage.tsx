@@ -1,179 +1,173 @@
-const dummyTasks = [
-  {
-    id: 1,
-    title: "Fix React Responsive Layout Issues",
-    category: "Web Development",
-    price: 250,
-    description:
-      "Need help fixing mobile responsiveness on a Next.js application",
-    postedAt: "2023-07-25",
-    deadline: "2023-08-01",
-    bids: 4,
-    rating: 4.8,
-  },
-  {
-    id: 2,
-    title: "Logo Design for Tech Startup",
-    category: "Graphic Design",
-    price: 150,
-    description:
-      "Modern and minimalist logo design required for new SaaS company",
-    postedAt: "2023-07-24",
-    deadline: "2023-07-30",
-    bids: 7,
-    rating: 4.9,
-  },
-  {
-    id: 3,
-    title: "WordPress Site Optimization",
-    category: "Web Development",
-    price: 180,
-    description: "Speed optimization for existing WordPress site",
-    postedAt: "2023-07-23",
-    deadline: "2023-07-29",
-    bids: 2,
-    rating: 4.5,
-  },
-  {
-    id: 4,
-    title: "Write SEO-Friendly Blog Post",
-    category: "Content Writing",
-    price: 100,
-    description: "Need a 1500-word blog post on AI trends with SEO keywords",
-    postedAt: "2023-07-22",
-    deadline: "2023-07-28",
-    bids: 5,
-    rating: 4.7,
-  },
-  {
-    id: 5,
-    title: "Customer Support Chatbot",
-    category: "Tech Support",
-    price: 300,
-    description: "Develop a chatbot for customer support using OpenAI API",
-    postedAt: "2023-07-21",
-    deadline: "2023-07-27",
-    bids: 6,
-    rating: 4.6,
-  },
-  {
-    id: 6,
-    title: "Redesign Landing Page UI",
-    category: "Graphic Design",
-    price: 200,
-    description: "Redesign the homepage of an e-commerce store for a better UX",
-    postedAt: "2023-07-20",
-    deadline: "2023-07-26",
-    bids: 3,
-    rating: 4.8,
-  },
-  {
-    id: 7,
-    title: "Fix JavaScript Bug in Checkout System",
-    category: "Web Development",
-    price: 120,
-    description:
-      "Bug in Stripe payment integration causing failed transactions",
-    postedAt: "2023-07-19",
-    deadline: "2023-07-25",
-    bids: 4,
-    rating: 4.5,
-  },
-  {
-    id: 8,
-    title: "Proofread and Edit Website Content",
-    category: "Content Writing",
-    price: 80,
-    description: "Proofread and refine text for clarity and professionalism",
-    postedAt: "2023-07-18",
-    deadline: "2023-07-24",
-    bids: 2,
-    rating: 4.9,
-  },
-  {
-    id: 9,
-    title: "Configure AWS Server for App Deployment",
-    category: "Tech Support",
-    price: 350,
-    description:
-      "Set up and optimize an EC2 instance for a high-traffic web app",
-    postedAt: "2023-07-17",
-    deadline: "2023-07-23",
-    bids: 5,
-    rating: 4.7,
-  },
-  {
-    id: 10,
-    title: "Create Social Media Graphics",
-    category: "Graphic Design",
-    price: 130,
-    description: "Design 10 engaging Instagram and LinkedIn post templates",
-    postedAt: "2023-07-16",
-    deadline: "2023-07-22",
-    bids: 3,
-    rating: 4.6,
-  },
-];
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { db } from "../lib/firebase";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+} from "firebase/firestore";
 import Filters from "../components/Filters";
 import TaskList from "../components/TaskList";
 
 const TASKS_PER_PAGE = 5;
 
+interface Task {
+  id: string;
+  title: string;
+  category: string;
+  price: number;
+  description: string;
+  postedAt: string;
+  deadline: string;
+  bids: number;
+  rating: number;
+}
+
 const TasksPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastVisible, setLastVisible] = useState<any>(null);
+  const [totalTasks, setTotalTasks] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Get current page from URL, default to 1
-  const currentPage = Number(searchParams.get("page")) || 1;
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const tasksRef = collection(db, "tasks");
+        let q = query(tasksRef);
 
-  // Filtering and sorting logic
-  const filteredTasks = dummyTasks
-    .filter((task) => {
-      const matchesSearch = task.title
-        .toLowerCase()
-        .includes(searchParams.get("q")?.toLowerCase() || "");
-      const matchesCategory = searchParams.get("category")
-        ? task.category === searchParams.get("category")
-        : true;
-      const price = task.price;
-      const minPrice = Number(searchParams.get("minPrice")) || 0;
-      const maxPrice = Number(searchParams.get("maxPrice")) || Infinity;
+        // Apply filters
+        const category = searchParams.get("category");
+        const minPrice = searchParams.get("minPrice");
+        const maxPrice = searchParams.get("maxPrice");
+        const sortBy = searchParams.get("sortBy") || "newest";
+        const searchQuery = searchParams.get("q") || "";
 
-      return (
-        matchesSearch &&
-        matchesCategory &&
-        price >= minPrice &&
-        price <= maxPrice
-      );
-    })
-    .sort((a, b) => {
-      switch (searchParams.get("sortBy")) {
-        case "price-asc":
-          return a.price - b.price;
-        case "price-desc":
-          return b.price - a.price;
-        case "rating":
-          return b.rating - a.rating;
-        default:
-          return (
-            new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
+        if (category && category !== "all") {
+          q = query(q, where("category", "==", category));
+        }
+
+        if (minPrice) {
+          q = query(q, where("price", ">=", Number(minPrice)));
+        }
+
+        if (maxPrice) {
+          q = query(q, where("price", "<=", Number(maxPrice)));
+        }
+
+        // Apply sorting
+        switch (sortBy) {
+          case "price-asc":
+            q = query(q, orderBy("price", "asc"));
+            break;
+          case "price-desc":
+            q = query(q, orderBy("price", "desc"));
+            break;
+          case "rating":
+            q = query(q, orderBy("rating", "desc"));
+            break;
+          default:
+            q = query(q, orderBy("postedAt", "desc"));
+        }
+
+        // Apply search
+        if (searchQuery) {
+          q = query(
+            q,
+            where("title", ">=", searchQuery),
+            where("title", "<=", searchQuery + "\uf8ff")
           );
+        }
+
+        // Pagination
+        const paginatedQuery = query(q, limit(TASKS_PER_PAGE));
+        const documentSnapshots = await getDocs(paginatedQuery);
+
+        const tasksData: Task[] = [];
+        documentSnapshots.forEach((doc) => {
+          const data = doc.data();
+
+          // Add validation for timestamp fields
+          const convertFirestoreDate = (field: any) => {
+            if (field?.toDate) return field.toDate();
+            if (field?.seconds) return new Date(field.seconds * 1000);
+            console.error("Invalid date field:", field);
+            return new Date(); // Fallback value
+          };
+
+          tasksData.push({
+            id: doc.id,
+            title: data.title || "Untitled Task",
+            category: data.category || "uncategorized",
+            description: data.description || "",
+            postedAt: convertFirestoreDate(data.postedAt),
+            deadline: convertFirestoreDate(data.deadline),
+            price: Number(data.price) || 0,
+            bids: Number(data.bids) || 0,
+            rating: Number(data.rating) || 0,
+          } as Task);
+        });
+
+        setTasks(tasksData);
+        setLastVisible(
+          documentSnapshots.docs[documentSnapshots.docs.length - 1]
+        );
+        setTotalTasks(tasksData.length);
+        setLoading(false);
+      } catch (err) {
+        setError("Error fetching tasks");
+        setLoading(false);
       }
-    });
+    };
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredTasks.length / TASKS_PER_PAGE);
-  const paginatedTasks = filteredTasks.slice(
-    (currentPage - 1) * TASKS_PER_PAGE,
-    currentPage * TASKS_PER_PAGE
-  );
+    fetchTasks();
+  }, [searchParams]);
 
-  // Page navigation handlers
-  const goToPage = (page: number) => {
-    searchParams.set("page", page.toString());
-    setSearchParams(searchParams);
+  const handleNextPage = async () => {
+    try {
+      const tasksRef = collection(db, "tasks");
+      let q = query(tasksRef, startAfter(lastVisible), limit(TASKS_PER_PAGE));
+
+      const documentSnapshots = await getDocs(q);
+      const tasksData: Task[] = [];
+      documentSnapshots.forEach((doc) => {
+        tasksData.push({ id: doc.id, ...doc.data() } as Task);
+      });
+
+      setTasks(tasksData);
+      setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+      setCurrentPage((prev) => prev + 1);
+    } catch (err) {
+      setError("Error fetching next page");
+    }
   };
+
+  const handlePrevPage = async () => {
+    // Implement previous page logic similarly
+    // Note: Firestore doesn't natively support previous page
+    // You might need to keep track of previous document snapshots
+  };
+
+  // if (error) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <h1 className="text-2xl font-bold mb-4">{error}</h1>
+  //         <Link to="/" className="text-[#F4B860] hover:text-[#e3a24f]">
+  //           Return to homepage
+  //         </Link>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,45 +181,45 @@ const TasksPage = () => {
             <Filters />
           </div>
 
-          <div className="lg:col-span-3">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">
-              Showing {filteredTasks.length} results
-            </h2>
-
-            {/* Render tasks */}
-            <TaskList tasks={paginatedTasks} />
-
-            {/* Pagination Controls */}
-            <div className="flex justify-center mt-8 gap-4">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => goToPage(currentPage - 1)}
-                className={`px-4 py-2 rounded-lg ${
-                  currentPage === 1
-                    ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
-                    : "bg-[#F4B860] text-white hover:bg-[#F4A63B]"
-                }`}
-              >
-                Previous
-              </button>
-
-              <span className="text-lg font-semibold">
-                Page {currentPage} of {totalPages}
-              </span>
-
-              <button
-                disabled={currentPage === totalPages}
-                onClick={() => goToPage(currentPage + 1)}
-                className={`px-4 py-2 rounded-lg ${
-                  currentPage === totalPages
-                    ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
-                    : "bg-[#f7b654] text-white hover:bg-[#F4A63B]"
-                }`}
-              >
-                Next
-              </button>
+          {loading ? (
+            <div className="lg:col-span-3 min-h-[70vh] bg-gray-50 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F4B860]"></div>
             </div>
-          </div>
+          ) : (
+            <div className="lg:col-span-3">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                Showing {totalTasks} results
+              </h2>
+
+              <TaskList tasks={tasks} />
+              {tasks.length > TASKS_PER_PAGE && (
+                <div className="flex justify-center mt-8 gap-4">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={handlePrevPage}
+                    className={`px-4 py-2 rounded-lg ${
+                      currentPage === 1
+                        ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
+                        : "bg-[#F4B860] text-white hover:bg-[#F4A63B]"
+                    }`}
+                  >
+                    Previous
+                  </button>
+
+                  <span className="text-lg font-semibold">
+                    Page {currentPage}
+                  </span>
+
+                  <button
+                    onClick={handleNextPage}
+                    className={`px-4 py-2 rounded-lg bg-[#f7b654] text-white hover:bg-[#F4A63B]`}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

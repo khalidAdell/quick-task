@@ -53,6 +53,28 @@ const Navbar = () => {
               >
                 About
               </NavLink>
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  `text-gray-600 hover:text-[#F4B860] transition-all font-medium
+                  ${
+                    isActive ? "text-[#F4B860] border-b-2 border-[#F4B860]" : ""
+                  }`
+                }
+              >
+                Profile
+              </NavLink>
+              <NavLink
+                to="/post-task"
+                className={({ isActive }) =>
+                  `text-gray-600 hover:text-[#F4B860] transition-all font-medium
+                  ${
+                    isActive ? "text-[#F4B860] border-b-2 border-[#F4B860]" : ""
+                  }`
+                }
+              >
+                Post Task
+              </NavLink>
             </div>
 
             {/* Auth Buttons */}
