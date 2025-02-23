@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { db } from "../lib/firebase";
 import {
   collection,
   query,
   where,
-  orderBy,
-  limit,
-  startAfter,
+  // orderBy,
+  // limit,
+  // startAfter,
   getDocs,
 } from "firebase/firestore";
 import Filters from "../components/Filters";
@@ -32,10 +32,10 @@ const TasksPage = () => {
   const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lastVisible, setLastVisible] = useState<any>(null);
+  // const [error, setError] = useState<string | null>(null);
+  // const [lastVisible, setLastVisible] = useState<any>(null);
   const [totalTasks, setTotalTasks] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  // const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -48,7 +48,7 @@ const TasksPage = () => {
         const category = searchParams.get("category");
         const minPrice = searchParams.get("minPrice");
         const maxPrice = searchParams.get("maxPrice");
-        const sortBy = searchParams.get("sortBy") || "newest";
+        // const sortBy = searchParams.get("sortBy") || "newest";
         const searchQuery =
           searchParams.get("search".toLocaleLowerCase()) || "";
 
@@ -119,13 +119,13 @@ const TasksPage = () => {
         });
 
         setTasks(tasksData);
-        setLastVisible(
-          documentSnapshots.docs[documentSnapshots.docs.length - 1]
-        );
+        // setLastVisible(
+        //   documentSnapshots.docs[documentSnapshots.docs.length - 1]
+        // );
         setTotalTasks(tasksData.length);
         setLoading(false);
       } catch (err) {
-        setError("Error fetching tasks");
+        // setError("Error fetching tasks");
         setLoading(false);
       }
     };
@@ -159,18 +159,18 @@ const TasksPage = () => {
               {tasks.length > TASKS_PER_PAGE && (
                 <div className="flex justify-center mt-8 gap-4">
                   <button
-                    disabled={currentPage === 1}
-                    className={`px-4 py-2 rounded-lg ${
-                      currentPage === 1
-                        ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
-                        : "bg-[#F4B860] text-white hover:bg-[#F4A63B]"
-                    }`}
+                  // disabled={currentPage === 1}
+                  // className={`px-4 py-2 rounded-lg ${
+                  //   currentPage === 1
+                  //     ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
+                  //     : "bg-[#F4B860] text-white hover:bg-[#F4A63B]"
+                  // }`}
                   >
                     Previous
                   </button>
 
                   <span className="text-lg font-semibold">
-                    Page {currentPage}
+                    {/* Page {currentPage} */}
                   </span>
 
                   <button
