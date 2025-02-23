@@ -15,10 +15,10 @@ const TaskCard = ({ task }: { task: any }) => {
               <FaRegStar className="text-[#F4B860]" />
               <span>{task.rating}</span>
               <span className="text-gray-300">•</span>
-              <span>{task.bids} bids</span>
+              <span>{task.bidsCount} bids</span>
             </div>
           </div>
-          <h3 className="text-xl font-semibold mb-2">
+          <h3 className="text-xl font-semibold mb-2 capitalize">
             <Link to={`/tasks/${task.id}`} className="hover:text-[#F4B860]">
               {task.title}
             </Link>
@@ -30,6 +30,12 @@ const TaskCard = ({ task }: { task: any }) => {
           <div className="text-sm text-gray-500 flex items-center gap-1">
             <FaRegClock />
             <span>{formatDistanceToNow(new Date(task.postedAt))} ago</span>
+          </div>
+          <div className="text-sm text-gray-500 flex items-center gap-1">
+            <FaRegClock />
+            <span>
+              Deadline: {new Date(task.deadline).toLocaleDateString()}
+            </span>
           </div>
           <Link
             to={`/tasks/${task.id}`}

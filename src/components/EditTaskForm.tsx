@@ -1,10 +1,10 @@
-// CreateTaskForm.tsx
-import { useState } from "react";
+// EditTaskForm.tsx
+import { useState, useEffect } from "react";
 import { auth, db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface TaskFormData {
   title: string;
@@ -15,48 +15,108 @@ interface TaskFormData {
   requirements: string;
 }
 
-const CreateTaskForm = () => {
+const EditTaskForm = () => {
+  const { taskId } = useParams<{ taskId: string }>();
   const [user, loading] = useAuthState(auth);
   const navigate = useNavigate();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingTask, setIsLoadingTask] = useState(true);
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<TaskFormData>();
 
+  useEffect(() => {
+    const fetchTask = async () => {
+      setIsLoadingTask(true);
+      setSubmitError(null);
+
+      if (!taskId) {
+        setSubmitError("Task ID is missing");
+        setIsLoadingTask(false);
+        return;
+      }
+
+      try {
+        const taskRef = doc(db, "tasks", taskId);
+        const taskDoc = await getDoc(taskRef);
+
+        if (!taskDoc.exists()) {
+          setSubmitError("Task not found");
+          setIsLoadingTask(false);
+          return;
+        }
+
+        const data = taskDoc.data();
+        if (user && data.ownerId !== user.uid) {
+          return navigate(`/tasks/${taskId}`);
+        }
+
+        reset({
+          title: data.title,
+          category: data.category,
+          price: data.price,
+          description: data.description,
+          deadline: data.deadline,
+          requirements: data.requirements.join("\n"),
+        });
+      } catch (error) {
+        console.error("Error fetching task:", error);
+        setSubmitError(`Failed to load task: ${(error as Error).message}`);
+      } finally {
+        setIsLoadingTask(false);
+      }
+    };
+
+    fetchTask();
+  }, [taskId, reset]);
+
   const onSubmit = async (data: TaskFormData) => {
-    if (!user) {
-      setSubmitError("You must be logged in to create a task");
+    if (!user || !taskId) {
+      setSubmitError("Unauthorized");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await addDoc(collection(db, "tasks"), {
-        ...data,
-        titke: data.title.toLocaleLowerCase(),
+      setSubmitError(null);
+
+      const taskRef = doc(db, "tasks", taskId);
+      const currentTask = await getDoc(taskRef);
+
+      if (!currentTask.exists()) {
+        setSubmitError("Task no longer exists");
+        return;
+      }
+
+      if (currentTask.data().ownerId !== user.uid) {
+        setSubmitError("You can only edit your own tasks");
+        return;
+      }
+
+      await updateDoc(taskRef, {
+        title: data.title,
+        category: data.category,
         price: Number(data.price),
+        description: data.description,
+        deadline: data.deadline,
         requirements: data.requirements.split("\n").filter((r) => r.trim()),
-        ownerId: user.uid,
-        postedAt: serverTimestamp(),
-        bids: [],
-        bidsCount: 0,
-        rating: 0,
-        status: "open",
       });
-      navigate("/tasks");
+
+      navigate(`/tasks/${taskId}`);
     } catch (error) {
-      console.error("Error creating task:", error);
-      setSubmitError("Failed to create task. Please try again.");
+      console.error("Error updating task:", error);
+      setSubmitError(`Failed to update task: ${(error as Error).message}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (loading) {
+  if (loading || isLoadingTask) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#F4B860]"></div>
@@ -69,7 +129,7 @@ const CreateTaskForm = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">
-            Please log in to create tasks
+            Please log in to edit tasks
           </h2>
           <button
             onClick={() => navigate("/login")}
@@ -85,7 +145,7 @@ const CreateTaskForm = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm p-8">
-        <h1 className="text-3xl font-bold mb-6">Create New Task</h1>
+        <h1 className="text-3xl font-bold mb-6">Edit Task</h1>
 
         {submitError && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
@@ -211,29 +271,7 @@ const CreateTaskForm = () => {
             disabled={isSubmitting}
             className="w-full bg-[#F4B860] hover:bg-[#e3a24f] text-white py-3 rounded-lg flex items-center justify-center disabled:opacity-50"
           >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Posting Task...
-              </>
-            ) : (
-              "Post Task"
-            )}
+            {isSubmitting ? "Updating Task..." : "Update Task"}
           </button>
         </form>
       </div>
@@ -241,4 +279,4 @@ const CreateTaskForm = () => {
   );
 };
 
-export default CreateTaskForm;
+export default EditTaskForm;

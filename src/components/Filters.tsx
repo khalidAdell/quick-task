@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import Select from "react-select";
 import { FaFilter, FaTimes } from "react-icons/fa";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const categories = [
@@ -40,11 +40,12 @@ const selectStyles = {
 
 const Filters = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isMobile, setIsMobile] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   // State management
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
   const [category, setCategory] = useState(
     categories.find((c) => c.value === searchParams.get("category")) ||
       categories[0]
@@ -53,17 +54,8 @@ const Filters = () => {
   const [maxPrice, setMaxPrice] = useState(searchParams.get("maxPrice") || "");
   const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "newest");
 
-  // Mobile detection
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
   // Sync state with URL params
   useEffect(() => {
-    setSearchQuery(searchParams.get("q") || "");
     setCategory(
       categories.find((c) => c.value === searchParams.get("category")) ||
         categories[0]
@@ -72,6 +64,20 @@ const Filters = () => {
     setMaxPrice(searchParams.get("maxPrice") || "");
     setSortBy(searchParams.get("sortBy") || "newest");
   }, [searchParams]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+
+    const params = new URLSearchParams(searchParams);
+    e.target.value
+      ? params.set("search", e.target.value)
+      : params.delete("search");
+    setSearchParams(params);
+
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 0);
+  };
 
   const handlePriceChange = (type: "min" | "max", value: string) => {
     const numericValue = value.replace(/\D/g, "");
@@ -94,167 +100,98 @@ const Filters = () => {
 
   const resetFilters = () => {
     setSearchParams(new URLSearchParams());
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const FilterContent = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+  return (
+    <div className="hidden lg:block sticky top-5">
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 space-y-6">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <FaFilter className="text-[#F4B860]" /> Filters
         </h3>
-        {isMobile && (
-          <button
-            onClick={() => setIsMobileOpen(false)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FaTimes size={24} />
-          </button>
-        )}
-      </div>
 
-      {/* Search Filter */}
-      <div>
-        <label className="block text-sm font-medium mb-2">Search</label>
-        <input
-          type="text"
-          placeholder="Keyword search..."
-          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
-          value={searchQuery}
-          onChange={(e) => {
-            const params = new URLSearchParams(searchParams);
-            e.target.value
-              ? params.set("q", e.target.value)
-              : params.delete("q");
-            setSearchParams(params);
-          }}
-        />
-      </div>
-
-      {/* Category Filter */}
-      <div>
-        <label className="block text-sm font-medium mb-2">Category</label>
-        <Select
-          options={categories}
-          value={category}
-          onChange={(selected) => {
-            const params = new URLSearchParams(searchParams);
-            selected?.value === "all"
-              ? params.delete("category")
-              : params.set("category", selected?.value || "");
-            setSearchParams(params);
-          }}
-          styles={selectStyles}
-          menuPlacement="auto"
-        />
-      </div>
-
-      {/* Price Filter */}
-      <div>
-        <label className="block text-sm font-medium mb-2">
-          Price Range ($)
-        </label>
-        <div className="grid grid-cols-2 gap-4">
+        {/* Search Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Search</label>
           <input
-            type="number"
-            placeholder="Min"
+            ref={searchInputRef}
+            type="text"
+            placeholder="Keyword search..."
             className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
-            value={minPrice}
-            onChange={(e) => handlePriceChange("min", e.target.value)}
-            min="0"
-            onKeyDown={(e) =>
-              ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()
-            }
-          />
-          <input
-            type="number"
-            placeholder="Max"
-            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
-            value={maxPrice}
-            onChange={(e) => handlePriceChange("max", e.target.value)}
-            min="0"
-            onKeyDown={(e) =>
-              ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()
-            }
+            value={searchQuery}
+            onChange={handleSearchChange}
           />
         </div>
-      </div>
 
-      {/* Sort Filter */}
-      <div>
-        <label className="block text-sm font-medium mb-2">Sort By</label>
-        <select
-          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
-          value={sortBy}
-          onChange={(e) => {
-            const params = new URLSearchParams(searchParams);
-            params.set("sortBy", e.target.value);
-            setSearchParams(params);
-          }}
-        >
-          <option value="newest">Newest First</option>
-          <option value="price-asc">Price: Low to High</option>
-          <option value="price-desc">Price: High to Low</option>
-          <option value="rating">Highest Rating</option>
-        </select>
-      </div>
+        {/* Category Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Category</label>
+          <Select
+            options={categories}
+            value={category}
+            onChange={(selected) => {
+              const params = new URLSearchParams(searchParams);
+              selected?.value === "all"
+                ? params.delete("category")
+                : params.set("category", selected?.value || "");
+              setSearchParams(params);
+            }}
+            styles={selectStyles}
+            menuPlacement="auto"
+          />
+        </div>
 
-      <button
-        onClick={resetFilters}
-        className="w-full bg-[#F4B860] hover:bg-[#e3a24f] text-white px-6 py-2 rounded-lg transition"
-      >
-        Reset Filters
-      </button>
-    </div>
-  );
+        {/* Price Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">
+            Price Range ($)
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="number"
+              placeholder="Min"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
+              value={minPrice}
+              onChange={(e) => handlePriceChange("min", e.target.value)}
+              min="0"
+            />
+            <input
+              type="number"
+              placeholder="Max"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
+              value={maxPrice}
+              onChange={(e) => handlePriceChange("max", e.target.value)}
+              min="0"
+            />
+          </div>
+        </div>
 
-  return (
-    <>
-      {/* Mobile Trigger */}
-      {isMobile && (
+        {/* Sort Filter */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Sort By</label>
+          <select
+            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#F4B860] outline-none"
+            value={sortBy}
+            onChange={(e) => {
+              const params = new URLSearchParams(searchParams);
+              params.set("sortBy", e.target.value);
+              setSearchParams(params);
+            }}
+          >
+            <option value="newest">Newest First</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Highest Rating</option>
+          </select>
+        </div>
+
         <button
-          onClick={() => setIsMobileOpen(true)}
-          className="fixed bottom-4 right-4 bg-[#F4B860] text-white p-4 rounded-full shadow-lg z-20"
+          onClick={resetFilters}
+          className="w-full bg-[#F4B860] hover:bg-[#e3a24f] text-white px-6 py-2 rounded-lg transition"
         >
-          <FaFilter size={24} />
+          Reset Filters
         </button>
-      )}
-
-      {/* Mobile Overlay */}
-      <AnimatePresence>
-        {isMobile && isMobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-30"
-            onClick={() => setIsMobileOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Desktop Filters */}
-      <div className="hidden lg:block sticky top-5">
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-          <FilterContent />
-        </div>
       </div>
-
-      {/* Mobile Filters */}
-      <AnimatePresence>
-        {isMobile && isMobileOpen && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "tween" }}
-            className="fixed top-0 right-0 h-full w-full max-w-sm bg-white p-6 z-40 overflow-y-auto shadow-xl"
-          >
-            <FilterContent />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   );
 };
 

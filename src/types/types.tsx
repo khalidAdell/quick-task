@@ -2,21 +2,28 @@ export interface Bid {
   id: string;
   bidderId: string;
   bidderName: string;
+  bidderPhotoURL: string;
   amount: number;
   timestamp: string;
-  message?: string;
 }
 
 export interface Task {
+  paymentStatus: any;
   id: string;
   title: string;
   category: string;
   price: number;
   description: string;
-  postedAt: Date;
+  postedAt: Date | any;
   deadline: Date;
-  bids: number;
+  bids: Bid[];
+  bidsCount: number;
   rating: number;
+  requirements: string[];
+  ownerId: string;
+  status: "open" | "assigned" | "completed" | "closed";
+  winningBid?: Bid;
+  assignedTo?: string;
 }
 export interface AddTask {
   id: string;
@@ -25,6 +32,7 @@ export interface AddTask {
   price: number;
   description: string;
   postedAt: any;
+  completedAt: any;
   deadline: string;
   requirements: string[];
   ownerId: string;

@@ -56,7 +56,7 @@ const Home = () => {
           <img
             src="/src/assets/images/illustration.jpg"
             alt="Freelancer Working"
-            className="w-[400px] rounded-xl shadow-lg"
+            className="w-[400px]"
           />
         </motion.div>
       </motion.section>
