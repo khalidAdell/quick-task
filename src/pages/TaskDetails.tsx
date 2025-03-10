@@ -59,17 +59,15 @@ const TaskDetails = () => {
         if (snapshot.exists()) {
           const taskData = snapshot.data() as Omit<Task, "id">;
 
-          const postedAt = taskData.postedAt?.toDate
-            ? taskData.postedAt.toDate()
-            : new Date(taskData.postedAt);
-
-          const deadline = new Date(taskData.deadline);
+          const postedAt = taskData.postedAt
+            ? new Date(taskData.postedAt)
+            : new Date();
 
           setTask({
             ...taskData,
             id: snapshot.id,
             postedAt: isValid(postedAt) ? postedAt : new Date(),
-            deadline: isValid(deadline) ? deadline : new Date(),
+            deadline: taskData.deadline,
             status: taskData.status || "open",
             winningBid: taskData.winningBid || undefined,
           });
@@ -514,11 +512,7 @@ const TaskDetails = () => {
                     <FaRegClock className="flex-shrink-0" />
                     <div>
                       <p className="text-sm">Deadline</p>
-                      <p className="font-medium">
-                        {isValid(task.deadline)
-                          ? `${formatDistanceToNow(task.deadline)} left`
-                          : "Invalid date"}
-                      </p>
+                      <p className="font-medium">{task.deadline}</p>
                     </div>
                   </div>
                   {auth.currentUser?.uid === task?.assignedTo &&

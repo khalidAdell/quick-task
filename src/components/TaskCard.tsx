@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { FaRegClock, FaRegStar } from "react-icons/fa";
 import { formatDistanceToNow } from "date-fns";
+import { Task } from "../types/types";
 
-const TaskCard = ({ task }: { task: any }) => {
+const TaskCard = ({ task }: { task: Task }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6">
       <div className="flex flex-col md:flex-row justify-between gap-4">
@@ -33,9 +34,7 @@ const TaskCard = ({ task }: { task: any }) => {
           </div>
           <div className="text-sm text-gray-500 flex items-center gap-1">
             <FaRegClock />
-            <span>
-              Deadline: {new Date(task.deadline).toLocaleDateString()}
-            </span>
+            <span>Deadline: {task.deadline}</span>
           </div>
           <Link
             to={`/tasks/${task.id}`}

@@ -37,7 +37,7 @@ const CreateTaskForm = () => {
       setIsSubmitting(true);
       await addDoc(collection(db, "tasks"), {
         ...data,
-        titke: data.title.toLocaleLowerCase(),
+        title: data.title.toLocaleLowerCase(),
         price: Number(data.price),
         requirements: data.requirements.split("\n").filter((r) => r.trim()),
         ownerId: user.uid,

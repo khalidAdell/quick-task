@@ -8,14 +8,14 @@ export interface Bid {
 }
 
 export interface Task {
-  paymentStatus: any;
+  paymentStatus: string;
   id: string;
   title: string;
   category: string;
   price: number;
   description: string;
-  postedAt: Date | any;
-  deadline: Date;
+  postedAt: Date;
+  deadline: string;
   bids: Bid[];
   bidsCount: number;
   rating: number;

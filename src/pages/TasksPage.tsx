@@ -1,16 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { db } from "../lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  // orderBy,
-  // limit,
-  // startAfter,
-  getDocs,
-} from "firebase/firestore";
+import { db, auth } from "../lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { onAuthStateChanged, User } from "firebase/auth";
 import Filters from "../components/Filters";
 import TaskList from "../components/TaskList";
 
@@ -32,25 +26,37 @@ const TasksPage = () => {
   const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
-  // const [lastVisible, setLastVisible] = useState<any>(null);
   const [totalTasks, setTotalTasks] = useState(0);
-  // const [currentPage, setCurrentPage] = useState(1);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) {
+        setTasks([]);
+        setTotalTasks(0);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
         setLoading(true);
         const tasksRef = collection(db, "tasks");
         let q = query(tasksRef);
 
-        // Apply filters
+        // Existing filter logic
         const category = searchParams.get("category");
         const minPrice = searchParams.get("minPrice");
         const maxPrice = searchParams.get("maxPrice");
-        // const sortBy = searchParams.get("sortBy") || "newest";
-        const searchQuery =
-          searchParams.get("search".toLocaleLowerCase()) || "";
+        const searchQuery = searchParams.get("search")?.toLowerCase() || "";
 
         if (category && category !== "all") {
           q = query(q, where("category", "==", category));
@@ -64,22 +70,6 @@ const TasksPage = () => {
           q = query(q, where("price", "<=", Number(maxPrice)));
         }
 
-        // // Apply sorting
-        // switch (sortBy) {
-        //   case "price-asc":
-        //     q = query(q, orderBy("price", "asc"));
-        //     break;
-        //   case "price-desc":
-        //     q = query(q, orderBy("price", "desc"));
-        //     break;
-        //   case "rating":
-        //     q = query(q, orderBy("rating", "desc"));
-        //     break;
-        //   default:
-        //     q = query(q, orderBy("postedAt", "desc"));
-        // }
-
-        // Apply search
         if (searchQuery) {
           q = query(
             q,
@@ -88,20 +78,17 @@ const TasksPage = () => {
           );
         }
 
-        // Pagination
         const documentSnapshots = await getDocs(q);
 
         const tasksData: Task[] = [];
         documentSnapshots.forEach((doc) => {
           const data = doc.data();
-          if (data.status !== "open") {
-            return;
-          }
-          // Add validation for timestamp fields
+          if (data.status !== "open") return;
+
           const convertFirestoreDate = (field: any) => {
             if (field?.toDate) return field.toDate();
             if (field?.seconds) return new Date(field.seconds * 1000);
-            return new Date(); // Fallback value
+            return new Date();
           };
 
           tasksData.push({
@@ -110,28 +97,24 @@ const TasksPage = () => {
             category: data.category || "uncategorized",
             description: data.description || "",
             postedAt: convertFirestoreDate(data.postedAt),
-            deadline: convertFirestoreDate(data.deadline),
+            deadline: data.deadline,
             price: Number(data.price) || 0,
             bids: Number(data.bids) || 0,
-            bidsCount: Number(data.bidsCount) || 0,
             rating: Number(data.rating) || 0,
           } as Task);
         });
 
-        setTasks(tasksData);
-        // setLastVisible(
-        //   documentSnapshots.docs[documentSnapshots.docs.length - 1]
-        // );
+        setTasks(tasksData.reverse());
         setTotalTasks(tasksData.length);
         setLoading(false);
-      } catch (err) {
-        // setError("Error fetching tasks");
+      } catch (error) {
+        console.error("Error fetching tasks", error);
         setLoading(false);
       }
     };
 
     fetchTasks();
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -151,31 +134,24 @@ const TasksPage = () => {
             </div>
           ) : (
             <div className="lg:col-span-3">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                Showing {totalTasks} results
-              </h2>
+              {user ? (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                    Showing {totalTasks} results
+                  </h2>
+                  <TaskList tasks={tasks} />
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4">
+                    Please log in to view tasks
+                  </h2>
+                </div>
+              )}
 
-              <TaskList tasks={tasks} />
-              {tasks.length > TASKS_PER_PAGE && (
+              {tasks.length > TASKS_PER_PAGE && user && (
                 <div className="flex justify-center mt-8 gap-4">
-                  <button
-                  // disabled={currentPage === 1}
-                  // className={`px-4 py-2 rounded-lg ${
-                  //   currentPage === 1
-                  //     ? "bg-[#f4b96097] text-gray-400 cursor-not-allowed"
-                  //     : "bg-[#F4B860] text-white hover:bg-[#F4A63B]"
-                  // }`}
-                  >
-                    Previous
-                  </button>
-
-                  <span className="text-lg font-semibold">
-                    {/* Page {currentPage} */}
-                  </span>
-
-                  <button
-                    className={`px-4 py-2 rounded-lg bg-[#f7b654] text-white hover:bg-[#F4A63B]`}
-                  >
+                  <button className="px-4 py-2 rounded-lg bg-[#f7b654] text-white hover:bg-[#F4A63B]">
                     Next
                   </button>
                 </div>

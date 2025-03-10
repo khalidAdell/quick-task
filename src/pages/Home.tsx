@@ -1,6 +1,11 @@
 // Home.tsx
 import { motion } from "framer-motion";
-import { FaSearch, FaCode, FaArrowRight } from "react-icons/fa";
+import {
+  //  FaSearch,
+  FaCode,
+  FaArrowRight,
+} from "react-icons/fa";
+import illustration from "../assets/illustration.jpg";
 
 // Animation configurations
 const containerVariants = {
@@ -54,15 +59,16 @@ const Home = () => {
           className="mt-10 md:mt-0 md:ml-12"
         >
           <img
-            src="/src/assets/images/illustration.jpg"
+            src={illustration}
             alt="Freelancer Working"
             className="w-[400px]"
           />
+          ;
         </motion.div>
       </motion.section>
 
       {/* Search Bar */}
-      <motion.div
+      {/* <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className="max-w-4xl mx-auto px-4 -mt-16 mb-16 z-10 relative"
@@ -82,7 +88,7 @@ const Home = () => {
             Search
           </motion.button>
         </div>
-      </motion.div>
+      </motion.div> */}
 
       {/* Task Categories */}
       <motion.section
@@ -267,7 +273,7 @@ const Home = () => {
           </p>
           <motion.div
             variants={slideUp}
-            className="max-w-md mx-auto flex gap-4"
+            className="max-w-md mx-auto flex gap-4 flex-wrap"
           >
             <input
               type="email"

@@ -14,13 +14,13 @@ import TaskDetails from "./pages/TaskDetails";
 import CreateTaskForm from "./components/CreateTaskForm";
 import ProfilePage from "./pages/ProfilePage";
 import { auth } from "./lib/firebase"; // Import Firebase auth
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { JSX, useEffect, useState } from "react";
 import EditTaskForm from "./components/EditTaskForm";
 
 // Auth Guard Component
 const AuthGuard = ({ children }: { children: JSX.Element }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const AuthGuard = ({ children }: { children: JSX.Element }) => {
 
 // Public Guard Component
 const PublicGuard = ({ children }: { children: JSX.Element }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

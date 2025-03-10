@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "../lib/firebase";
 import {
@@ -263,11 +265,7 @@ const ProfilePage = () => {
         {/* Profile Info */}
         <div className="bg-white rounded-xl shadow-sm p-8 mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">
-            <input
-              {...register("displayName", { required: true })}
-              className="text-center bg-transparent focus:bg-gray-100 rounded px-2 py-1"
-              placeholder="Enter your name"
-            />
+            {user.displayName || "Your Name"}
           </h1>
 
           <div className="flex justify-center space-x-4 mt-4">
